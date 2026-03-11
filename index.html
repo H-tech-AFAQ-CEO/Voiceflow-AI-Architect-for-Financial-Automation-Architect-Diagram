@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trade Confirmation Flow — Enterprise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+<style>
+:root {
+  --bg:       #080c12;
+  --surface:  #0e1520;
+  --card:     #111827;
+  --border:   rgba(255,255,255,0.07);
+  --border-h: rgba(255,255,255,0.14);
+
+  --gold:     #c9a84c;
+  --gold-light:#e8c97a;
+  --gold-dim: rgba(201,168,76,0.12);
+  --gold-glow:rgba(201,168,76,0.35);
+
+  --cyan:     #38bdf8;
+  --cyan-dim: rgba(56,189,248,0.10);
+  --cyan-glow:rgba(56,189,248,0.30);
+
+  --emerald:  #34d399;
+  --emerald-dim:rgba(52,211,153,0.10);
+  --emerald-glow:rgba(52,211,153,0.30);
+
+  --rose:     #fb7185;
+  --rose-dim: rgba(251,113,133,0.10);
+  --rose-glow:rgba(251,113,133,0.30);
+
+  --amber:    #fbbf24;
+  --amber-dim:rgba(251,191,36,0.10);
+
+  --violet:   #a78bfa;
+  --violet-dim:rgba(167,139,250,0.12);
+  --violet-glow:rgba(167,139,250,0.35);
+
+  --text:     #e8edf5;
+  --muted:    #64748b;
+  --subtle:   #1e293b;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── BACKGROUND ── */
+.bg-layer {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201,168,76,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(56,189,248,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(167,139,250,0.03) 0%, transparent 60%);
+}
+
+.grid-overlay {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 100% 100% at 50% 0%, black 0%, transparent 80%);
+}
+
+/* ── LAYOUT ── */
+.page { position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 48px 24px 80px; }
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  margin-bottom: 56px;
+  animation: fadeSlideDown 0.8s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.header-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase;
+  color: var(--gold); border: 1px solid rgba(201,168,76,0.3);
+  background: var(--gold-dim); padding: 6px 16px; border-radius: 100px;
+  margin-bottom: 20px;
+}
+
+.header h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  background: linear-gradient(135deg, var(--text) 0%, var(--gold-light) 50%, var(--cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 12px;
+}
+
+.header p {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 300;
+  letter-spacing: 0.01em;
+}
+
+/* ── LEGEND ── */
+.legend {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  margin-bottom: 52px;
+  animation: fadeSlideDown 0.9s 0.1s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.legend-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.72rem; color: var(--muted);
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 100px;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.legend-item:hover { border-color: var(--border-h); color: var(--text); }
+
+.legend-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── PHASE ── */
+.phase {
+  margin-bottom: 12px;
+  animation: fadeUp 0.7s cubic-bezier(0.22,1,0.36,1) both;
+}
+
+.phase-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+
+.phase-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.65rem; font-weight: 500;
+  color: var(--gold); background: var(--gold-dim);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 3px 10px; border-radius: 100px;
+  letter-spacing: 0.1em; text-transform: uppercase; white-space: nowrap;
+}
+
+.phase-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.8rem; font-weight: 700;
+  color: var(--muted); text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.phase-line { flex: 1; height: 1px; background: var(--border); }
+
+/* ── FLOW CONNECTOR ── */
+.connector {
+  display: flex; flex-direction: column; align-items: center;
+  margin: 4px 0; gap: 2px;
+}
+
+.connector-line {
+  width: 1px; height: 28px;
+  background: linear-gradient(to bottom, var(--border-h), var(--border));
+}
+
+.connector-arrow {
+  width: 0; height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 7px solid var(--muted);
+}
+
+.connector-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem; color: var(--muted);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+}
+
+/* ── NODE BASE ── */
+.node {
+  position: relative;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+  font-size: 0.78rem; font-weight: 500; line-height: 1.35;
+  transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+  cursor: default;
+  overflow: hidden;
+}
+
+.node::before {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.node:hover { transform: translateY(-2px) scale(1.01); }
+.node:hover::before { opacity: 1; }
+
+.node-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.node-icon svg { width: 15px; height: 15px; }
+
+.node-text { flex: 1; }
+.node-label { font-size: 0.67rem; font-family: 'DM Mono', monospace; opacity: 0.5; margin-bottom: 1px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ── NODE VARIANTS ── */
+.node-trigger {
+  border-color: rgba(201,168,76,0.4);
+  background: linear-gradient(135deg, #0f110a 0%, #141208 100%);
+  box-shadow: 0 0 0 1px rgba(201,168,76,0.1), 0 4px 24px rgba(0,0,0,0.4);
+}
+.node-trigger:hover { border-color: var(--gold); box-shadow: 0 0 24px var(--gold-glow), 0 8px 32px rgba(0,0,0,0.5); }
+.node-trigger::before { background: radial-gradient(ellipse at center, var(--gold-dim), transparent 70%); }
+.node-trigger .node-icon { background: var(--gold-dim); color: var(--gold); }
+.node-trigger .node-text { color: var(--gold-light); }
+
+.node-process {
+  border-color: rgba(56,189,248,0.2);
+  background: linear-gradient(135deg, #080f18 0%, #0a1420 100%);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+.node-process:hover { border-color: rgba(56,189,248,0.5); box-shadow: 0 0 20px var(--cyan-glow), 0 6px 24px rgba(0,0,0,0.4); }
+.node-process::before { background: radial-gradient(ellipse at left, var(--cyan-dim), transparent 70%); }
+.node-process .node-icon { background: var(--cyan-dim); color: var(--cyan); }
+.node-process .node-text { color: #bfdbfe; }
+
+.node-decision {
+  border-color: rgba(251,191,36,0.25);
+  background: linear-gradient(135deg, #0f0c00 0%, #131000 100%);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+.node-decision:hover { border-color: rgba(251,191,36,0.5); box-shadow: 0 0 20px rgba(251,191,36,0.2), 0 6px 24px rgba(0,0,0,0.4); }
+.node-decision .node-icon { background: rgba(251,191,36,0.12); color: var(--amber); }
+.node-decision .node-text { color: #fde68a; }
+
+.node-error {
+  border-color: rgba(251,113,133,0.25);
+  background: linear-gradient(135deg, #0f0508 0%, #130609 100%);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+.node-error:hover { border-color: rgba(251,113,133,0.5); box-shadow: 0 0 20px var(--rose-glow), 0 6px 24px rgba(0,0,0,0.4); }
+.node-error .node-icon { background: var(--rose-dim); color: var(--rose); }
+.node-error .node-text { color: #fecdd3; }
+
+.node-success {
+  border-color: rgba(52,211,153,0.25);
+  background: linear-gradient(135deg, #020f09 0%, #040f0b 100%);
+  box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+}
+.node-success:hover { border-color: rgba(52,211,153,0.5); box-shadow: 0 0 20px var(--emerald-glow), 0 6px 24px rgba(0,0,0,0.4); }
+.node-success .node-icon { background: var(--emerald-dim); color: var(--emerald); }
+.node-success .node-text { color: #a7f3d0; }
+
+.node-warning {
+  border-color: rgba(251,191,36,0.2);
+  background: linear-gradient(135deg, #0f0a00 0%, #130d00 100%);
+}
+.node-warning:hover { border-color: rgba(251,191,36,0.4); box-shadow: 0 0 16px rgba(251,191,36,0.15); }
+.node-warning .node-icon { background: rgba(251,191,36,0.1); color: var(--amber); }
+.node-warning .node-text { color: #fde68a; }
+
+.node-violet {
+  border-color: rgba(167,139,250,0.25);
+  background: linear-gradient(135deg, #0c0814 0%, #0e0a18 100%);
+}
+.node-violet:hover { border-color: rgba(167,139,250,0.5); box-shadow: 0 0 20px var(--violet-glow); }
+.node-violet .node-icon { background: var(--violet-dim); color: var(--violet); }
+.node-violet .node-text { color: #ddd6fe; }
+
+.node-end {
+  border-color: rgba(201,168,76,0.35);
+  background: linear-gradient(135deg, #100d04 0%, #14100a 100%);
+  box-shadow: 0 0 0 1px rgba(201,168,76,0.08), 0 4px 24px rgba(0,0,0,0.5);
+}
+.node-end:hover { border-color: var(--gold); box-shadow: 0 0 28px var(--gold-glow); }
+.node-end .node-icon { background: var(--gold-dim); color: var(--gold); }
+.node-end .node-text { color: var(--gold-light); }
+
+/* ── CENTER LAYOUT ── */
+.center { display: flex; flex-direction: column; align-items: center; }
+.center .node { min-width: min(360px, 100%); max-width: 440px; width: 100%; }
+
+/* ── BRANCH LAYOUTS ── */
+.branch-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.branch-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  width: 100%;
+}
+
+.branch-2 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+
+.lane {
+  display: flex; flex-direction: column;
+  align-items: stretch; gap: 8px;
+}
+
+.lane-header {
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  padding: 4px 0;
+}
+
+/* ── SECTION CARD ── */
+.section-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex; flex-direction: column;
+  align-items: stretch; gap: 8px;
+  transition: border-color 0.25s;
+}
+
+.section-card:hover { border-color: var(--border-h); }
+
+.section-card-title {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.62rem; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  padding-bottom: 8px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 6px;
+}
+
+/* ── SPLIT CARD inside OMS ── */
+.split-card {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ── BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.6rem; padding: 3px 10px;
+  border-radius: 100px; border: 1px solid;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+
+.badge-success { color: var(--emerald); border-color: rgba(52,211,153,0.35); background: var(--emerald-dim); }
+.badge-error   { color: var(--rose);    border-color: rgba(251,113,133,0.35); background: var(--rose-dim); }
+.badge-warn    { color: var(--amber);   border-color: rgba(251,191,36,0.35);  background: rgba(251,191,36,0.08); }
+.badge-info    { color: var(--cyan);    border-color: rgba(56,189,248,0.35);  background: var(--cyan-dim); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0); }
+  50%       { box-shadow: 0 0 0 6px rgba(201,168,76,0.15); }
+}
+
+@keyframes flowDash {
+  from { stroke-dashoffset: 100; }
+  to   { stroke-dashoffset: 0; }
+}
+
+.phase:nth-child(1) { animation-delay: 0.1s; }
+.phase:nth-child(2) { animation-delay: 0.2s; }
+.phase:nth-child(3) { animation-delay: 0.3s; }
+.phase:nth-child(4) { animation-delay: 0.4s; }
+.phase:nth-child(5) { animation-delay: 0.5s; }
+
+.node-trigger { animation: pulseGold 3s ease-in-out infinite; }
+
+/* ── SCROLL REVEAL ── */
+.reveal {
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  .branch-4 { grid-template-columns: repeat(2, 1fr); }
+  .branch-3 { grid-template-columns: repeat(2, 1fr); }
+  .branch-2 { grid-template-columns: 1fr; }
+  .split-card { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .page { padding: 28px 14px 60px; }
+  .branch-4 { grid-template-columns: 1fr; }
+  .branch-3 { grid-template-columns: 1fr; }
+  .header h1 { font-size: 1.6rem; }
+  .node { padding: 10px 12px; font-size: 0.75rem; }
+  .node-icon { width: 28px; height: 28px; }
+}
+
+/* ── DIVIDER LINE SVG ── */
+.svg-connector {
+  width: 100%; overflow: visible;
+  margin: 0; display: block;
+  height: 36px;
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="grid-overlay"></div>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-badge">
+      <i data-lucide="activity" style="width:12px;height:12px;"></i>
+      Enterprise Workflow
+    </div>
+    <h1>Trade Confirmation<br>Processing Pipeline</h1>
+    <p>Automated email ingestion · Classification · Risk &amp; Compliance · OMS Booking</p>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--gold);"></div> Trigger / End</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--cyan);"></div> Process Step</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--amber);"></div> Decision Gate</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--rose);"></div> Error / Alert</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--emerald);"></div> Success</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--violet);"></div> Fallback</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PHASE 1 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="phase reveal">
+    <div class="phase-header">
+      <div class="phase-num">Phase 01</div>
+      <div class="phase-title">Email Ingestion</div>
+      <div class="phase-line"></div>
+    </div>
+
+    <div class="center">
+      <div class="node node-trigger">
+        <div class="node-icon"><i data-lucide="mail"></i></div>
+        <div class="node-text">
+          <div class="node-label">Trigger</div>
+          Incoming Email Trade Confirmation
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+
+      <div style="width:100%; max-width:740px;">
+        <div class="branch-2">
+          <!-- Main path -->
+          <div class="section-card">
+            <div class="section-card-title">
+              <i data-lucide="check-circle" style="width:12px;height:12px;color:var(--emerald);"></i>
+              Success Path
+            </div>
+            <div class="node node-process">
+              <div class="node-icon"><i data-lucide="link"></i></div>
+              <div class="node-text">
+                <div class="node-label">API</div>
+                Connect to Shared Mailbox API
+              </div>
+            </div>
+            <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+            <div class="node node-process">
+              <div class="node-icon"><i data-lucide="file-search"></i></div>
+              <div class="node-text">
+                <div class="node-label">Parser</div>
+                Parse Email Content &amp; Extract Attachment
+              </div>
+            </div>
+          </div>
+
+          <!-- Error path -->
+          <div class="section-card" style="border-color:rgba(251,113,133,0.2);">
+            <div class="section-card-title">
+              <i data-lucide="x-circle" style="width:12px;height:12px;color:var(--rose);"></i>
+              Failure Path
+            </div>
+            <div class="node node-error">
+              <div class="node-icon"><i data-lucide="alert-triangle"></i></div>
+              <div class="node-text">
+                <div class="node-label">Logger</div>
+                Log API Error &amp; Retry Logic
+              </div>
+            </div>
+            <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+            <div class="node node-decision">
+              <div class="node-icon"><i data-lucide="git-branch"></i></div>
+              <div class="node-text">
+                <div class="node-label">Gate</div>
+                Retry Count &lt; 3?
+              </div>
+            </div>
+            <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div><div class="connector-label">No →</div></div>
+            <div class="node node-error">
+              <div class="node-icon"><i data-lucide="siren"></i></div>
+              <div class="node-text">
+                <div class="node-label">Alert</div>
+                Send Critical Alert to Engineering Team
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PHASE 2 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="phase reveal" style="margin-top:36px;">
+    <div class="phase-header">
+      <div class="phase-num">Phase 02</div>
+      <div class="phase-title">Trade Type Classification</div>
+      <div class="phase-line"></div>
+    </div>
+
+    <div class="center">
+      <div class="node node-decision">
+        <div class="node-icon"><i data-lucide="git-fork"></i></div>
+        <div class="node-text">
+          <div class="node-label">Router</div>
+          Router Block: Identify Trade Type
+        </div>
+      </div>
+
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+
+      <div class="branch-4" style="width:100%;">
+        <!-- Equity -->
+        <div class="lane">
+          <div class="lane-header"><i data-lucide="trending-up" style="width:10px;height:10px;display:inline;"></i> Equity</div>
+          <div class="node node-process">
+            <div class="node-icon"><i data-lucide="bar-chart-2"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Sub-Flow: Equity Trade</div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="node node-process">
+            <div class="node-icon"><i data-lucide="scan-text"></i></div>
+            <div class="node-text" style="font-size:0.72rem;">
+              <div class="node-label">RegEx</div>
+              Extract ISIN, Ticker, Shares
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="node node-process">
+            <div class="node-icon"><i data-lucide="cpu"></i></div>
+            <div class="node-text" style="font-size:0.72rem;">
+              <div class="node-label">Text AI</div>
+              Extract Counterparty Name
+            </div>
+          </div>
+        </div>
+
+        <!-- FX -->
+        <div class="lane">
+          <div class="lane-header"><i data-lucide="repeat" style="width:10px;height:10px;display:inline;"></i> FX Forward</div>
+          <div class="node node-process">
+            <div class="node-icon"><i data-lucide="arrow-left-right"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Sub-Flow: FX Trade</div>
+          </div>
+        </div>
+
+        <!-- Derivative -->
+        <div class="lane">
+          <div class="lane-header"><i data-lucide="activity" style="width:10px;height:10px;display:inline;"></i> Derivative</div>
+          <div class="node node-process">
+            <div class="node-icon"><i data-lucide="candlestick-chart"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Sub-Flow: Derivative Trade</div>
+          </div>
+        </div>
+
+        <!-- Unrecognized -->
+        <div class="lane">
+          <div class="lane-header" style="color:var(--rose);"><i data-lucide="help-circle" style="width:10px;height:10px;display:inline;"></i> Unrecognized</div>
+          <div class="node node-error">
+            <div class="node-icon"><i data-lucide="user-check"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">
+              <div class="node-label">Escalate</div>
+              Human Compliance Officer
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="node node-trigger" style="animation:none;">
+            <div class="node-icon"><i data-lucide="octagon"></i></div>
+            <div class="node-text" style="font-size:0.72rem;">
+              <div class="node-label">End Session</div>
+              Manual Review Required
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PHASE 3 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="phase reveal" style="margin-top:36px;">
+    <div class="phase-header">
+      <div class="phase-num">Phase 03</div>
+      <div class="phase-title">Data Aggregation &amp; Compliance</div>
+      <div class="phase-line"></div>
+    </div>
+
+    <div class="center">
+      <div class="node node-violet">
+        <div class="node-icon"><i data-lucide="layers"></i></div>
+        <div class="node-text">
+          <div class="node-label">Aggregator</div>
+          Aggregate Extracted Data into Variable Object
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+      <div class="node node-process">
+        <div class="node-icon"><i data-lucide="key"></i></div>
+        <div class="node-text">
+          <div class="node-label">Payload Builder</div>
+          Structure API Payload with Idempotency Key UUID
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+      <div class="node node-decision" style="max-width:440px;width:100%;">
+        <div class="node-icon"><i data-lucide="shield-check"></i></div>
+        <div class="node-text">
+          <div class="node-label">Compliance Engine</div>
+          Call Internal Risk &amp; Compliance API
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+
+      <!-- 3-way compliance outcome -->
+      <div class="branch-3" style="width:100%;">
+
+        <!-- 200 OK -->
+        <div class="section-card" style="border-color:rgba(52,211,153,0.2);">
+          <div class="section-card-title">
+            <span class="badge badge-success"><i data-lucide="check" style="width:10px;height:10px;"></i> 200 OK — Passed</span>
+          </div>
+          <div class="node node-success">
+            <div class="node-icon"><i data-lucide="table"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Format Data for OMS</div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="node node-success">
+            <div class="node-icon"><i data-lucide="send"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">
+              <div class="node-label">OMS API</div>
+              Book Trade
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="split-card">
+            <div class="lane" style="gap:6px;">
+              <div class="lane-header" style="color:var(--emerald);">Success</div>
+              <div class="node node-end" style="animation:none;">
+                <div class="node-icon"><i data-lucide="check-check"></i></div>
+                <div class="node-text" style="font-size:0.7rem;">Trade Confirmed: Notify Client &amp; Ops</div>
+              </div>
+            </div>
+            <div class="lane" style="gap:6px;">
+              <div class="lane-header" style="color:var(--rose);">Failure</div>
+              <div class="node node-decision" style="padding:10px 12px;">
+                <div class="node-icon"><i data-lucide="copy"></i></div>
+                <div class="node-text" style="font-size:0.7rem;">Is Idempotent?</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:4px; padding: 0 4px;">
+                <span style="font-size:0.62rem; color:var(--emerald); font-family:'DM Mono',monospace;">Yes → Duplicate, skip</span>
+                <span style="font-size:0.62rem; color:var(--rose); font-family:'DM Mono',monospace;">No → System Error ↓</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4xx/5xx Error -->
+        <div class="section-card" style="border-color:rgba(251,191,36,0.15);">
+          <div class="section-card-title">
+            <span class="badge badge-warn"><i data-lucide="alert-circle" style="width:10px;height:10px;"></i> 4xx / 5xx Error</span>
+          </div>
+          <div class="node node-decision">
+            <div class="node-icon"><i data-lucide="search"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">
+              <div class="node-label">Diagnosis</div>
+              Check Failure Type
+            </div>
+          </div>
+        </div>
+
+        <!-- Timeout -->
+        <div class="section-card" style="border-color:rgba(251,113,133,0.15);">
+          <div class="section-card-title">
+            <span class="badge badge-error"><i data-lucide="timer-off" style="width:10px;height:10px;"></i> Timeout</span>
+          </div>
+          <div class="node node-warning">
+            <div class="node-icon"><i data-lucide="clock"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">
+              <div class="node-label">Logger</div>
+              Log Timeout &amp; Prepare for Retry
+            </div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+          <div class="node node-decision">
+            <div class="node-icon"><i data-lucide="refresh-cw"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Retry Count &lt; 2?</div>
+          </div>
+          <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div><div class="connector-label">No →</div></div>
+          <div class="node node-error">
+            <div class="node-icon"><i data-lucide="workflow"></i></div>
+            <div class="node-text" style="font-size:0.73rem;">Trigger Fallback Flow</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════ -->
+  <!-- PHASE 4 -->
+  <!-- ══════════════════════════════════════════════════════ -->
+  <div class="phase reveal" style="margin-top:36px;">
+    <div class="phase-header">
+      <div class="phase-num">Phase 04</div>
+      <div class="phase-title">Fallback &amp; Graceful Exit</div>
+      <div class="phase-line"></div>
+    </div>
+
+    <div class="center">
+      <div class="node node-error">
+        <div class="node-icon"><i data-lucide="database-backup"></i></div>
+        <div class="node-text">
+          <div class="node-label">State Capture</div>
+          Capture Full Payload &amp; Session State
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+      <div class="node node-error">
+        <div class="node-icon"><i data-lucide="hard-drive"></i></div>
+        <div class="node-text">
+          <div class="node-label">Database</div>
+          Write to 'Failed Trades' Database Table
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+      <div class="node node-warning">
+        <div class="node-icon"><i data-lucide="message-square-warning"></i></div>
+        <div class="node-text">
+          <div class="node-label">Slack / Escalation</div>
+          Send Notification to Compliance Team
+        </div>
+      </div>
+      <div class="connector"><div class="connector-line"></div><div class="connector-arrow"></div></div>
+      <div class="node node-end">
+        <div class="node-icon"><i data-lucide="ticket-check"></i></div>
+        <div class="node-text">
+          <div class="node-label">Graceful Exit</div>
+          Case # Generated for Review
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Init Lucide icons
+  lucide.createIcons();
+
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach((el, i) => {
+    el.style.transitionDelay = `${i * 0.07}s`;
+    observer.observe(el);
+  });
+
+  // Stagger node reveals within each phase
+  document.querySelectorAll('.phase').forEach(phase => {
+    phase.querySelectorAll('.node').forEach((node, i) => {
+      node.style.opacity = '0';
+      node.style.transform = 'translateY(12px)';
+      node.style.transition = `opacity 0.5s ${0.1 + i * 0.06}s ease, transform 0.5s ${0.1 + i * 0.06}s cubic-bezier(0.22,1,0.36,1), box-shadow 0.25s ease, border-color 0.25s ease`;
+    });
+  });
+
+  const nodeObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.node').forEach(node => {
+          node.style.opacity = '1';
+          node.style.transform = 'translateY(0)';
+        });
+        nodeObserver.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.05 });
+
+  document.querySelectorAll('.phase').forEach(el => nodeObserver.observe(el));
+</script>
+
+</body>
+</html>
